@@ -8,8 +8,9 @@ Prof. Ricardo Carlini Sperandio
 
 ## Grupo
 
-| Nome          | Matrícula   | Responsabilidade principal nesta entrega |
-|Cláudio Augusto| 835748      | TUDO                                     |
+| Nome | Matrícula | Responsabilidade principal nesta entrega |
+|---|---|---|
+| Cláudio Augusto | 835748 | infraestrutura, simulador, modelagem NoSQL e ingestão Bronze |
 
 ---
 
@@ -304,9 +305,13 @@ são eles que alimentarão o detector de anomalias da Entrega 3.
 
 ## 12. Uso de ferramentas de IA
 
-_Preencher antes de submeter, conforme exigido pelo enunciado (seção 9):
-declarar onde houve apoio de IA. Todo o código entregue é compreendido pelo
-grupo e defensável na demonstração._
+O enunciado (seção 9) exige a declaração **no relatório técnico**, que é um
+entregável da Entrega 3 — o modelo de relatório reserva a seção 10 para ela.
+Esta seção aqui é um rascunho antecipado dessa declaração, mantido junto ao
+código para não se perder até lá.
+
+_A preencher: quais ferramentas foram usadas e para quê. Se nenhuma foi usada,
+declarar isso também._
 
 ## 13. Submissão (checklist do roteiro)
 
@@ -316,7 +321,7 @@ grupo e defensável na demonstração._
 - [ ] Modelagem NoSQL justificada (`docs/modelagem_nosql.md` + ADR-0002)
 - [ ] Bronze em Parquet particionada por data; reexecução não duplica
 - [ ] README com o passo a passo de execução
-- [ ] Nomes e matrículas do grupo preenchidos (seção 1) e uso de IA declarado (seção 12)
+- [ ] Nomes e matrículas do grupo preenchidos (seção 1)
 - [ ] Histórico de commits evidenciando a contribuição de cada integrante
 - [ ] Tag `entrega-1` criada e enviada
 
