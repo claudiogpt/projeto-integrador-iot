@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acmetech.example/contracts/sensor_reading/v1",
+  "title": "SensorReading",
+  "description": "One reading emitted by an AcmeTech industrial sensor (contract v1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "reading_id",
+    "line_id",
+    "machine_id",
+    "sensor_id",
+    "sensor_type",
+    "value",
+    "unit",
+    "event_time"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "reading_id": { "type": "string", "format": "uuid" },
+    "line_id": { "type": "string", "pattern": "^L-[0-9]{2}$" },
+    "machine_id": { "type": "string", "pattern": "^M-[0-9]{3}$" },
+    "sensor_id": { "type": "string", "pattern": "^M-[0-9]{3}-(TMP|VIB|PRS|PWR)$" },
+    "sensor_type": {
+      "enum": ["temperature", "vibration", "pressure", "power"]
+    },
+    "value": { "type": "number" },
+    "unit": { "enum": ["celsius", "mm_s", "bar", "kw"] },
+    "event_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the sensor measured the value (UTC, ISO 8601)."
+    },
+    "injected_anomaly": {
+      "type": "boolean",
+      "description": "Ground truth set by the simulator; never use it to detect anomalies."
+    }
+  }
+}

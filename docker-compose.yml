@@ -1,0 +1,97 @@
+# Projeto Integrador — Plataforma de Dados IoT (AcmeTech)
+# Entrega 1: object storage S3 + catálogo NoSQL.
+# Entregas 2 e 3 estendem este arquivo (Spark/Airflow, depois Kafka).
+#
+# Diferenças em relação ao starter kit (ver docs/adr/):
+#   * nenhuma credencial em arquivo versionado — o s3.json do SeaweedFS é
+#     renderizado em runtime a partir do .env;
+#   * variáveis obrigatórias com `:?`, para falhar cedo e com mensagem clara;
+#   * bucket do lakehouse criado na subida por um serviço de bootstrap;
+#   * healthcheck do Mongo autenticado (prova que o usuário do .env existe).
+name: acmetech-platform
+
+services:
+  object-storage:
+    # O SeaweedFS expõe a mesma API S3 do MinIO, arquivado em 2026 — ADR-0001.
+    image: chrislusf/seaweedfs:4.47
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        mkdir -p /etc/seaweedfs
+        printf '%s\n' \
+          '{' \
+          '  "identities": [' \
+          '    {' \
+          "      \"name\": \"$${S3_ACCESS_KEY}\"," \
+          '      "credentials": [' \
+          "        { \"accessKey\": \"$${S3_ACCESS_KEY}\", \"secretKey\": \"$${S3_SECRET_KEY}\" }" \
+          '      ],' \
+          '      "actions": ["Admin", "Read", "List", "Tagging", "Write"]' \
+          '    }' \
+          '  ]' \
+          '}' > /etc/seaweedfs/s3.json
+        chmod 600 /etc/seaweedfs/s3.json
+        exec weed server -ip.bind=0.0.0.0 -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?defina S3_ACCESS_KEY no .env (copie de .env.example)}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?defina S3_SECRET_KEY no .env (copie de .env.example)}
+    ports:
+      - "8333:8333"   # API S3
+      - "9333:9333"   # master / status
+    volumes:
+      - object-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:9333/cluster/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  catalog-db:
+    image: mongo:7.0.25
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:?defina MONGO_USER no .env (copie de .env.example)}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?defina MONGO_PASSWORD no .env (copie de .env.example)}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-acmetech}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mongosh --quiet -u "$$MONGO_INITDB_ROOT_USERNAME" -p "$$MONGO_INITDB_ROOT_PASSWORD"
+          --authenticationDatabase admin --eval "db.adminCommand('ping').ok" | grep -q 1
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # Cria o bucket do lakehouse e encerra (exit 0). Assim `docker compose up`
+  # continua sendo o único comando necessário antes da primeira ingestão.
+  lakehouse-bootstrap:
+    image: amazon/aws-cli:2.32.9
+    depends_on:
+      object-storage:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:?}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:?}
+      AWS_DEFAULT_REGION: us-east-1
+      # O SeaweedFS não implementa os checksums novos do SDK AWS.
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+      BUCKET: ${S3_BUCKET:?defina S3_BUCKET no .env (copie de .env.example)}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        aws --endpoint-url http://object-storage:8333 s3api create-bucket --bucket "$${BUCKET}" || true
+        aws --endpoint-url http://object-storage:8333 s3api head-bucket --bucket "$${BUCKET}"
+        echo "bucket $${BUCKET} pronto"
+    restart: "no"
+
+volumes:
+  object-data:
+  mongo-data:

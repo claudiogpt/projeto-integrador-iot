@@ -1,0 +1,12 @@
+# Segredos e ambiente local — nunca versionar
+.env
+.venv/
+*.pem
+
+# Artefatos de execução
+__pycache__/
+*.pyc
+.pytest_cache/
+*.jsonl
+data/
+out/
